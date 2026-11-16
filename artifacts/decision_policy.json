@@ -1,0 +1,19 @@
+{
+    "model_version": "v2.0.0",
+    "threshold": 0.06029702970297029,
+    "false_positive_cost_mad": 100,
+    "false_negative_cost_mad": 1000,
+    "max_alert_rate": 0.05,
+    "threshold_selection_month": 6,
+    "training_months": [
+        0,
+        1,
+        2,
+        3,
+        4
+    ],
+    "calibration_month": 5,
+    "test_month": 7,
+    "calibration_method": "none",
+    "threshold_selection": "minimum_cost_on_month_6"
+}
