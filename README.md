@@ -1,70 +1,107 @@
-# FraudShield — FastAPI starter
+# FraudShield — Fraud Risk Scoring with CatBoost
 
-Local API for educational scoring of **synthetic** BAF account applications. Do not use for real banking decisions.
+Machine learning project based on the **Bank Account Fraud Dataset Suite (NeurIPS 2022), Base variant**. The repository documents the complete ML workflow: exploration, cleaning, preprocessing, model comparison, probability calibration, cost-aware threshold selection, and retrospective evaluation. It also contains an API/Docker prototype and two Streamlit demonstrations.
 
-## 1. Set up on Windows (VS Code terminal / PowerShell)
+> **Scope:** Educational portfolio demonstration using **synthetic** banking data. Risk flags are review recommendations, not proof of fraud. Business costs are illustrative, not realized bank losses.
+
+## Live demos
+
+- **Premium dashboard:** https://fraudshield-ml-6t9rpwn6pi49sr9dsmhzxs.streamlit.app/
+- **Original demo:** https://fraudshield-ml-idhrbyfndcyogoubdrkggf.streamlit.app/
+
+## Dataset
+
+**Bank Account Fraud Dataset Suite (NeurIPS 2022), variant: `Base`**
+
+https://www.kaggle.com/datasets/sgpjesus/bank-account-fraud-dataset-neurips-2022
+
+The dataset **is not bundled** with the repository. Download it from Kaggle under the dataset's own terms. Locate the Base CSV (commonly `Base.csv`) and put it in a local `data/` folder, which should remain untracked by Git.
+
+```text
+fraudshield-ml/
+├── data/                         # local only; do not commit
+│   └── Base.csv
+├── notebooks/
+│   └── fraud_detection_experiments.ipynb
+├── docs/
+│   └── fraudshield_ml_report.pdf
+├── artifacts/                    # exported model + fitted transformers
+├── api/
+│   ├── main.py
+│   └── inference.py
+├── streamlit_app.py
+├── requirements.txt
+├── Dockerfile
+└── compose.yaml
+```
+
+The exact notebook filename in your checkout may differ. Adjust the notebook's initial CSV path cell to point to `data/Base.csv` (or to the Kaggle dataset path when running in Kaggle). **The existing notebook assumes an explicitly configured path; there is no guarantee it will run unchanged after download.**
+
+## Local setup
+
+Use **Python 3.11**, especially when loading the exported scikit-learn transformers.
 
 ```powershell
+# Windows PowerShell, from the repository root
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-If PowerShell blocks activation, use `.venv\Scripts\python.exe` instead of `python` and `.venv\Scripts\pip.exe` instead of `pip`.
+Ensure `requirements.txt` pins **`scikit-learn==1.6.1`**. The serialized preprocessing objects were fitted using that version; newer versions may fail to load them or transform data correctly.
 
-## 2. Install Kaggle exports
+### Explore/reproduce the ML experiments
 
-Unzip your downloaded `fraudshield_artifacts_v2.zip`. Copy the **ten files inside `artifacts/`** into this project's `artifacts/` folder. Do not copy a nested `artifacts/artifacts` folder. Check that `artifacts/catboost_v2.cbm` exists.
+1. Download the Kaggle dataset and select **`Base.csv`**.
+2. Place it at `data/Base.csv`, or attach it to a Kaggle notebook session.
+3. Open the notebook under `notebooks/`, update its loading path, and **run cells in order**.
+4. The workflow uses months 0–4 for model fitting, month 5 for optional calibration, month 6 for threshold selection, and month 7 for final reported evaluation.
+5. Model exports are stored in `artifacts/`; do not refit preprocessing using validation or test data.
 
-**Compatibility:** install the same Python, CatBoost, numpy, pandas and scikit-learn versions shown in `artifacts/model_metadata.json` if loading joblib fails or predictions differ. Joblib can execute code when loaded: only use trusted Kaggle-exported files.
+The full training notebook may also include earlier V1 experiments that use a different temporal split. Those validation scores should not be directly compared with V2 as if they used identical training windows.
 
-## 3. Run
+### Run Streamlit locally
 
 ```powershell
-python -m uvicorn api.main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m streamlit run streamlit_app.py
 ```
 
-Open http://127.0.0.1:8000/docs then `GET /health` and `GET /model/info`.
+Open http://localhost:8501. The app expects the exported `artifacts/` files (CatBoost `.cbm`, imputer/scaler `.joblib` files, encoder, schema and policy JSON). If artifacts are absent, first export them from the notebook.
 
-## 4. Test a prediction with a RAW observation
-
-If you have the original Kaggle `Base.csv`, place it somewhere locally, then run, using its actual path:
+### Run the FastAPI prototype locally
 
 ```powershell
-python scripts/make_sample_request.py --csv "C:\\path\\to\\Base.csv" --row 0
+.\.venv\Scripts\python.exe -m uvicorn api.main:app --port 8000
 ```
 
-Open `sample_request.json`, copy its contents into `/docs` -> `POST /predict` -> Try it out -> Execute.
+Open http://127.0.0.1:8000/docs. The key endpoints are `GET /health`, `GET /model/info`, and `POST /predict`. Send the **31 raw BAF input features**, not the final 58 numerical features; the preprocessing is performed server-side.
 
-The request structure is `{"features": { ... all 31 raw fields ... }}`. The model currently requires the dataset-relative `month` field and should only be demonstrated with synthetic BAF-compatible records. `model/info` lists the precise raw feature names.
-
-## 5. Caveats
-
-* The notebook's `reference_predictions.csv` contains **preprocessed** inputs. It verifies the CatBoost file but is not a valid raw API request.
-* The preserved V2 model includes `month` and `device_fraud_count`. A subsequent model version should reconsider these features; do not invent a value for a real future month.
-* The final notebook's exported `model_metadata.json` records library versions. Match them if you have compatibility problems.
-* Exposing this demo publicly will require authentication, abuse protection, and non-sensitive demo data.
-
-## 6. Run with Docker (next phase)
-
-First copy the **trusted** Kaggle-exported artifacts into `artifacts/`.
-Make sure `artifacts/catboost_v2.cbm` and all five `.joblib` files exist.
-
-Install Docker Desktop (Linux container mode), open the project folder in PowerShell, stop the existing local Uvicorn (`Ctrl+C`), then run:
+### Run using Docker
 
 ```powershell
 docker compose up --build -d
 docker compose ps
-docker compose logs --tail=60 api
-```
-
-Open http://127.0.0.1:8000/docs and execute `GET /health` and `POST /predict` with the exact same payload previously used locally. The score should match your earlier API response (approximately 0.006042407127395275 for the illustrated test) within floating-point tolerance.
-
-If you get a port error, stop the earlier Uvicorn process. Stop the container with:
-
-```powershell
 docker compose down
 ```
 
-**Compatibility:** `requirements.txt` pins `scikit-learn==1.6.1`, as required for the Kaggle-exported joblib objects. For best reproducibility, also pin numpy/pandas/CatBoost to the versions in the exported `model_metadata.json` after reviewing them. Use only trusted `.joblib` artifacts. The service is designed for synthetic demos and has no authentication; do not expose publicly without security controls.
+The Docker stack is an alternative to the Streamlit-only deployment. If port 8000 is occupied by a local Uvicorn process, stop it first.
+
+## Methods and test results
+
+| Item | Value |
+|---|---:|
+| Selected model | CatBoost V2, 330 trees |
+| Input → model features | 31 → 58 |
+| Test Average Precision | 0.219819 |
+| Test ROC–AUC | 0.896774 |
+| Test recall (fraud) | 0.39706 |
+| Test precision (fraud) | 0.22983 |
+| Decision threshold | 0.06029703 |
+| Hypothetical FP / FN costs | 100 / 1,000 MAD |
+| Hypothetical test cost reduction vs no alerts | 26.4% |
+
+See [the ML technical report](docs/fraudshield_ml_report.pdf) for preprocessing details, the comparison of model families, probability calibration results, thresholding methodology, confusion matrix, limitations, and evaluation discussion. The test data were accessed during earlier exploratory work, so the reported test evaluation should not be described as perfectly untouched.
+
+## Repository hygiene
+
+Keep `.env` files, credentials, `data/`, downloaded CSVs, local virtual environments, and personally identifying files out of Git. Serialized `joblib` files should only be loaded from trusted sources. Check notebooks for saved outputs or tokens before publishing them.
