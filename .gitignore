@@ -1,1 +1,3 @@
 artifacts/reference_predictions.csv
+!notebooks/
+!notebooks/*.ipynb
