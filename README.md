@@ -100,7 +100,7 @@ The Docker stack is an alternative to the Streamlit-only deployment. If port 800
 | Hypothetical FP / FN costs | 100 / 1,000 MAD |
 | Hypothetical test cost reduction vs no alerts | 26.4% |
 
-See [the ML technical report](docs/fraudshield_ml_report.pdf) for preprocessing details, the comparison of model families, probability calibration results, thresholding methodology, confusion matrix, limitations, and evaluation discussion. The test data were accessed during earlier exploratory work, so the reported test evaluation should not be described as perfectly untouched.
+See [the ML technical report](docs/FraudShield_ML_Report.pdf) for preprocessing details, the comparison of model families, probability calibration results, thresholding methodology, confusion matrix, limitations, and evaluation discussion. The test data were accessed during earlier exploratory work, so the reported test evaluation should not be described as perfectly untouched.
 
 ## Repository hygiene
 
