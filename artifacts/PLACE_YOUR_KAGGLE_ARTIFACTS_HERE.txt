@@ -1,0 +1,4 @@
+Unzip fraudshield_artifacts_v2.zip from Kaggle and copy ALL the files inside its artifacts/ directory into this folder.
+Expected: catboost_v2.cbm, decision_policy.json, encoder.joblib, feature_schema.json,
+imputer_balcon.joblib, imputer_missing.joblib, model_metadata.json, reference_predictions.csv,
+scaler_balcon.joblib, scaler_numeric.joblib.
